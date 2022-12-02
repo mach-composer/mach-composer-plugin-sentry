@@ -17,6 +17,7 @@ global:
 
 sites:
   - identifier: my-site
+    # ...
     components:
       - name: my-component
         # ...
