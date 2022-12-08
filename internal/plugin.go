@@ -49,7 +49,7 @@ func (p *SentryPlugin) Configure(environment string, provider string) error {
 }
 
 func (p *SentryPlugin) IsEnabled() bool {
-	return p.globalConfig.AuthToken != ""
+	return p.globalConfig.AuthToken != "" || p.globalConfig.DSN != ""
 }
 
 func (p *SentryPlugin) SetGlobalConfig(data map[string]any) error {
@@ -89,6 +89,9 @@ func (p *SentryPlugin) SetSiteComponentConfig(site string, component string, dat
 }
 
 func (p *SentryPlugin) TerraformRenderProviders(site string) (string, error) {
+	if p.globalConfig.AuthToken == "" {
+		return "", nil
+	}
 	result := fmt.Sprintf(`
 		sentry = {
 			source = "jianyuan/sentry"
@@ -100,6 +103,10 @@ func (p *SentryPlugin) TerraformRenderProviders(site string) (string, error) {
 func (p *SentryPlugin) TerraformRenderResources(site string) (string, error) {
 	cfg := p.getSiteConfig(site)
 	if cfg == nil {
+		return "", nil
+	}
+
+	if p.globalConfig.AuthToken == "" {
 		return "", nil
 	}
 
@@ -149,6 +156,10 @@ func (p *SentryPlugin) getComponentSiteConfig(site, name string) *ComponentConfi
 }
 
 func terraformRenderComponentResources(site, component string, cfg *ComponentConfig, globalCfg *GlobalConfig) (string, error) {
+	if globalCfg.AuthToken == "" {
+		return "", nil
+	}
+
 	templateContext := struct {
 		ComponentName string
 		SiteName      string
