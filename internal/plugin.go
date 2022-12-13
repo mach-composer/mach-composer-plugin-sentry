@@ -28,6 +28,8 @@ func NewSentryPlugin() schema.MachComposerPlugin {
 		Configure: state.Configure,
 		IsEnabled: state.IsEnabled,
 
+		GetValidationSchema: state.GetValidationSchema,
+
 		// Config
 		SetGlobalConfig:        state.SetGlobalConfig,
 		SetSiteConfig:          state.SetSiteConfig,
@@ -50,6 +52,11 @@ func (p *SentryPlugin) Configure(environment string, provider string) error {
 
 func (p *SentryPlugin) IsEnabled() bool {
 	return p.globalConfig.AuthToken != "" || p.globalConfig.DSN != ""
+}
+
+func (p *SentryPlugin) GetValidationSchema() (*schema.ValidationSchema, error) {
+	result := getSchema()
+	return result, nil
 }
 
 func (p *SentryPlugin) SetGlobalConfig(data map[string]any) error {
