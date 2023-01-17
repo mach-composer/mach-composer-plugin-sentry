@@ -25,8 +25,9 @@ type SiteConfig struct {
 
 // SentryConfig is for site specific sentry DSN settings
 type ComponentConfig struct {
-	BaseConfig `mapstructure:",squash"`
-	Project    string `mapstructure:"project"`
+	BaseConfig  `mapstructure:",squash"`
+	Environment string `mapstructure:"-"`
+	Project     string `mapstructure:"project"`
 }
 
 func (c *SiteConfig) extendGlobalConfig(g *GlobalConfig) *SiteConfig {

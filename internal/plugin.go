@@ -159,7 +159,9 @@ func (p *SentryPlugin) getComponentSiteConfig(site, name string) *ComponentConfi
 	if siteCfg == nil {
 		return nil
 	}
-	return siteCfg.getComponentSiteConfig(name)
+	cfg := siteCfg.getComponentSiteConfig(name)
+	cfg.Environment = p.environment
+	return cfg
 }
 
 func terraformRenderComponentResources(site, component string, cfg *ComponentConfig, globalCfg *GlobalConfig) (string, error) {
@@ -183,7 +185,7 @@ func terraformRenderComponentResources(site, component string, cfg *ComponentCon
 		resource "sentry_key" "{{ .ComponentName }}" {
 		organization      = {{ .Global.Organization|printf "%q" }}
 		project           = {{ .Config.Project|printf "%q" }}
-		name              = "{{ .SiteName }}_{{ .ComponentName }}"
+		name              = "{{ .SiteName }}-{{ .Config.Environment }}-{{ .ComponentName }}"
 		{{ if .Config.RateLimitWindow }}
 		rate_limit_window = {{ .Config.RateLimitWindow }}
 		{{ end }}
