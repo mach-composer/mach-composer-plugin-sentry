@@ -117,13 +117,21 @@ func (p *SentryPlugin) TerraformRenderResources(site string) (string, error) {
 		return "", nil
 	}
 
+	templateContext := struct {
+		Token string
+		URL   string
+	}{
+		Token: helpers.SerializeToHCL("token", p.globalConfig.AuthToken),
+		URL:   p.globalConfig.BaseURL,
+	}
+
 	template := `
 		provider "sentry" {
-			token = {{ .AuthToken|printf "%q" }}
-			base_url = {{ if .BaseURL }}{{ .BaseURL|printf "%q" }}{{ else }}"https://sentry.io/api/"{{ end }}
+			{{ .Token }}
+			base_url = {{ if .URL }}{{ .URL|printf "%q" }}{{ else }}"https://sentry.io/api/"{{ end }}
 		}
 	`
-	return helpers.RenderGoTemplate(template, p.globalConfig)
+	return helpers.RenderGoTemplate(template, templateContext)
 }
 
 func (p *SentryPlugin) RenderTerraformComponent(site string, component string) (*schema.ComponentSchema, error) {
@@ -182,7 +190,7 @@ func terraformRenderComponentResources(site, component string, cfg *ComponentCon
 	}
 
 	template := `
-		resource "sentry_key" "{{ .ComponentName }}" {
+	resource "sentry_key" "{{ .ComponentName }}" {
 		organization      = {{ .Global.Organization|printf "%q" }}
 		project           = {{ .Config.Project|printf "%q" }}
 		name              = "{{ .SiteName }}-{{ .Config.Environment }}-{{ .ComponentName }}"
@@ -192,7 +200,7 @@ func terraformRenderComponentResources(site, component string, cfg *ComponentCon
 		{{ if .Config.RateLimitCount }}
 		rate_limit_count  = {{ .Config.RateLimitCount }}
 		{{ end }}
-		}
+	}
 	`
 	return helpers.RenderGoTemplate(template, templateContext)
 }
