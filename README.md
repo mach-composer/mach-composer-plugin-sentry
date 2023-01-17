@@ -1,6 +1,11 @@
-# Sentry Plugin for Mach Composer 
+# Sentry Plugin for MACH composer
 
-This repository contains the Sentry plugin for Mach Composer. It requires Mach Composer 3.x
+This repository contains the Sentry plugin for Mach Composer. It requires MACH
+composer >= 2.5.x
+
+This plugin uses the (Sentry Terraform Provider)[https://github.com/jianyuan/terraform-provider-sentry]
+
+
 
 
 ## Usage
@@ -12,7 +17,7 @@ global:
     auth_token: "token"
     organization: "org"
     project: "default project"
-    rate_limit_window: 21600 
+    rate_limit_window: 21600
     rate_limit_count: 100
 
 sites:
