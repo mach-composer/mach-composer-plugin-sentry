@@ -11,6 +11,13 @@ This plugin uses the (Sentry Terraform Provider)[https://github.com/jianyuan/ter
 ## Usage
 
 ```yaml
+mach_composer:
+  version: 1
+  plugins:
+    sentry:
+      source: mach-composer/sentry
+      version: 0.1.3
+
 global:
   # ...
   sentry:
