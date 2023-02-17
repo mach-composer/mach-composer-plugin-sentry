@@ -96,7 +96,7 @@ func (p *SentryPlugin) SetSiteComponentConfig(site string, component string, dat
 }
 
 func (p *SentryPlugin) TerraformRenderProviders(site string) (string, error) {
-	if p.globalConfig.AuthToken == "" {
+	if !p.IsEnabled() {
 		return "", nil
 	}
 	result := fmt.Sprintf(`
@@ -108,12 +108,12 @@ func (p *SentryPlugin) TerraformRenderProviders(site string) (string, error) {
 }
 
 func (p *SentryPlugin) TerraformRenderResources(site string) (string, error) {
-	cfg := p.getSiteConfig(site)
-	if cfg == nil {
+	if !p.IsEnabled() {
 		return "", nil
 	}
 
-	if p.globalConfig.AuthToken == "" {
+	cfg := p.getSiteConfig(site)
+	if cfg == nil {
 		return "", nil
 	}
 
@@ -121,13 +121,13 @@ func (p *SentryPlugin) TerraformRenderResources(site string) (string, error) {
 		Token string
 		URL   string
 	}{
-		Token: helpers.SerializeToHCL("token", p.globalConfig.AuthToken),
+		Token: p.globalConfig.AuthToken,
 		URL:   p.globalConfig.BaseURL,
 	}
 
 	template := `
 		provider "sentry" {
-			{{ .Token }}
+			{{ renderOptionalProperty "token" .Token }}
 			base_url = {{ if .URL }}{{ .URL|printf "%q" }}{{ else }}"https://sentry.io/api/"{{ end }}
 		}
 	`
@@ -142,15 +142,18 @@ func (p *SentryPlugin) RenderTerraformComponent(site string, component string) (
 		vars = fmt.Sprintf("sentry_dsn = sentry_key.%s.dsn_secret", component)
 	}
 
-	resources, err := terraformRenderComponentResources(site, component, cfg, &p.globalConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	result := &schema.ComponentSchema{
 		Variables: vars,
-		Resources: resources,
 	}
+
+	if p.IsEnabled() {
+		resources, err := terraformRenderComponentResources(site, component, cfg, &p.globalConfig)
+		if err != nil {
+			return nil, err
+		}
+		result.Resources = resources
+	}
+
 	return result, nil
 }
 

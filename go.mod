@@ -3,7 +3,7 @@ module github.com/mach-composer/mach-composer-plugin-sentry
 go 1.19
 
 require (
-	github.com/mach-composer/mach-composer-plugin-helpers v0.0.2
+	github.com/mach-composer/mach-composer-plugin-helpers v0.0.4
 	github.com/mach-composer/mach-composer-plugin-sdk v0.0.6
 	github.com/mitchellh/mapstructure v1.5.0
 )
