@@ -18,7 +18,7 @@ type SentryPlugin struct {
 
 func NewSentryPlugin() schema.MachComposerPlugin {
 	state := &SentryPlugin{
-		provider:    "0.11.1",
+		provider:    "1.0.1",
 		siteConfigs: map[string]*SiteConfig{},
 	}
 
@@ -101,7 +101,7 @@ func (p *SentryPlugin) TerraformRenderProviders(site string) (string, error) {
 	}
 	result := fmt.Sprintf(`
 		sentry = {
-			source = "jianyuan/sentry"
+			source = "labd/sentry"
 			version = "%s"
 		}`, helpers.VersionConstraint(p.provider))
 	return result, nil

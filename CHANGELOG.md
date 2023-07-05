@@ -1,3 +1,7 @@
+# 0.1.4 (2023-07-05)
+ - Switch to using labd/sentry v1.0.1 as terraform provider. This release
+   includes optimzations for reading existing sentry keys.
+
 # 0.1.3 (2023-02-17)
  - Support the unmanaged mode whereby we only pass a DSN to the config
 
