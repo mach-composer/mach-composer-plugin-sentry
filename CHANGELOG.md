@@ -1,3 +1,7 @@
+# 0.1.5 (2023-07-05)
+ - Set default terraform provider to v1.0.2 to fix issue around resolving
+   existing sentry keys
+
 # 0.1.4 (2023-07-05)
  - Switch to using labd/sentry v1.0.1 as terraform provider. This release
    includes optimzations for reading existing sentry keys.

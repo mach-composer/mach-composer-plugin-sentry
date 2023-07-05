@@ -18,7 +18,7 @@ type SentryPlugin struct {
 
 func NewSentryPlugin() schema.MachComposerPlugin {
 	state := &SentryPlugin{
-		provider:    "1.0.1",
+		provider:    "1.0.2",
 		siteConfigs: map[string]*SiteConfig{},
 	}
 
