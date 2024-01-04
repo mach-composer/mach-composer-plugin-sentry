@@ -1,9 +1,7 @@
 name: Create release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
 
 jobs:
   goreleaser:
@@ -24,9 +22,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOPATH: ${{ env.GOPATH }}
-
-      - name: Upload release
-        uses: actions/upload-artifact@v3
-        with:
-          name: mach-composer-plugin-sentry
-          path: dist/*
