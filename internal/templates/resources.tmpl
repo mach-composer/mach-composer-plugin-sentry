@@ -1,0 +1,21 @@
+{{ if .ComponentVersion }}
+    resource "sentry_release_deployment" "{{ .ComponentName }}" {
+    organization    = {{ .Global.Organization|printf "%q" }}
+    version         = {{ .ComponentVersion|printf "%q" }}
+    environment     = {{ .Environment|printf "%q" }}
+    projects        = [{{ .Config.Project|printf "%q" }}]
+    depends_on      = [ module.{{ .ComponentName }} ]
+    }
+{{ end }}
+
+resource "sentry_key" "{{ .ComponentName }}" {
+organization      = {{ .Global.Organization|printf "%q" }}
+project           = {{ .Config.Project|printf "%q" }}
+name              = "{{ .Environment }}-{{ .SiteName }}-{{ .ComponentName }}"
+{{ if .Config.RateLimitWindow }}
+    rate_limit_window = {{ .Config.RateLimitWindow }}
+{{ end }}
+{{ if .Config.RateLimitCount }}
+    rate_limit_count  = {{ .Config.RateLimitCount }}
+{{ end }}
+}

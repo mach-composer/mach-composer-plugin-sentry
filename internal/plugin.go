@@ -1,32 +1,38 @@
 package internal
 
 import (
+	"embed"
 	"fmt"
+	"log"
 
 	"github.com/mach-composer/mach-composer-plugin-helpers/helpers"
-	"github.com/mach-composer/mach-composer-plugin-sdk/plugin"
-	"github.com/mach-composer/mach-composer-plugin-sdk/schema"
+	"github.com/mach-composer/mach-composer-plugin-sdk/v2/plugin"
+	"github.com/mach-composer/mach-composer-plugin-sdk/v2/schema"
 	"github.com/mitchellh/mapstructure"
 )
 
+//go:embed templates/*
+var templates embed.FS
+
 type SentryPlugin struct {
-	environment  string
-	provider     string
-	globalConfig GlobalConfig
-	siteConfigs  map[string]*SiteConfig
+	environment      string
+	provider         string
+	globalConfig     GlobalConfig
+	siteConfigs      map[string]*SiteConfig
+	componentConfigs map[string]*ComponentConfig
 }
 
 func NewSentryPlugin() schema.MachComposerPlugin {
 	state := &SentryPlugin{
-		provider:    "1.0.2",
-		siteConfigs: map[string]*SiteConfig{},
+		provider:         "1.0.2",
+		siteConfigs:      map[string]*SiteConfig{},
+		componentConfigs: map[string]*ComponentConfig{},
 	}
 
 	return plugin.NewPlugin(&schema.PluginSchema{
 		Identifier: "sentry",
 
 		Configure: state.Configure,
-		IsEnabled: state.IsEnabled,
 
 		GetValidationSchema: state.GetValidationSchema,
 
@@ -34,6 +40,7 @@ func NewSentryPlugin() schema.MachComposerPlugin {
 		SetGlobalConfig:        state.SetGlobalConfig,
 		SetSiteConfig:          state.SetSiteConfig,
 		SetSiteComponentConfig: state.SetSiteComponentConfig,
+		SetComponentConfig:     state.SetComponentConfig,
 
 		// Renders
 		RenderTerraformProviders: state.TerraformRenderProviders,
@@ -55,6 +62,7 @@ func (p *SentryPlugin) IsEnabled() bool {
 }
 
 func (p *SentryPlugin) GetValidationSchema() (*schema.ValidationSchema, error) {
+	log.Println("GetValidationSchema")
 	result := getSchema()
 	return result, nil
 }
@@ -68,7 +76,7 @@ func (p *SentryPlugin) SetGlobalConfig(data map[string]any) error {
 
 func (p *SentryPlugin) SetSiteConfig(site string, data map[string]any) error {
 	cfg := SiteConfig{
-		Components: map[string]ComponentConfig{},
+		Components: map[string]SiteComponentConfig{},
 	}
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
@@ -78,7 +86,7 @@ func (p *SentryPlugin) SetSiteConfig(site string, data map[string]any) error {
 }
 
 func (p *SentryPlugin) SetSiteComponentConfig(site string, component string, data map[string]any) error {
-	cfg := ComponentConfig{}
+	cfg := SiteComponentConfig{}
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
@@ -86,7 +94,7 @@ func (p *SentryPlugin) SetSiteComponentConfig(site string, component string, dat
 	siteCfg, ok := p.siteConfigs[site]
 	if !ok {
 		siteCfg = &SiteConfig{
-			Components: map[string]ComponentConfig{},
+			Components: map[string]SiteComponentConfig{},
 		}
 		p.siteConfigs[site] = siteCfg
 	}
@@ -95,7 +103,20 @@ func (p *SentryPlugin) SetSiteComponentConfig(site string, component string, dat
 	return nil
 }
 
-func (p *SentryPlugin) TerraformRenderProviders(site string) (string, error) {
+func (p *SentryPlugin) SetComponentConfig(component, version string, data map[string]any) error {
+	cfg := ComponentConfig{
+		Version: version,
+	}
+	if err := mapstructure.Decode(data, &cfg); err != nil {
+		return err
+	}
+
+	p.componentConfigs[component] = &cfg
+
+	return nil
+}
+
+func (p *SentryPlugin) TerraformRenderProviders(_ string) (string, error) {
 	if !p.IsEnabled() {
 		return "", nil
 	}
@@ -125,19 +146,19 @@ func (p *SentryPlugin) TerraformRenderResources(site string) (string, error) {
 		URL:   p.globalConfig.BaseURL,
 	}
 
-	template := `
-		provider "sentry" {
-			{{ renderOptionalProperty "token" .Token }}
-			base_url = {{ if .URL }}{{ .URL|printf "%q" }}{{ else }}"https://sentry.io/api/"{{ end }}
-		}
-	`
-	return helpers.RenderGoTemplate(template, templateContext)
+	tpl, err := templates.ReadFile("templates/provider.tmpl")
+	if err != nil {
+		return "", err
+	}
+
+	return helpers.RenderGoTemplate(string(tpl), templateContext)
 }
 
 func (p *SentryPlugin) RenderTerraformComponent(site string, component string) (*schema.ComponentSchema, error) {
-	cfg := p.getComponentSiteConfig(site, component)
+	siteComponentConfig := p.getSiteComponentConfig(site, component)
+	componentConfig := p.getComponentConfig(component)
 
-	vars := fmt.Sprintf("sentry_dsn = \"%s\"", cfg.DSN)
+	vars := fmt.Sprintf("sentry_dsn = \"%s\"", siteComponentConfig.DSN)
 	if p.globalConfig.AuthToken != "" {
 		vars = fmt.Sprintf("sentry_dsn = sentry_key.%s.dsn_secret", component)
 	}
@@ -147,7 +168,7 @@ func (p *SentryPlugin) RenderTerraformComponent(site string, component string) (
 	}
 
 	if p.IsEnabled() {
-		resources, err := terraformRenderComponentResources(site, component, cfg, &p.globalConfig)
+		resources, err := terraformRenderComponentResources(site, component, componentConfig.Version, p.environment, &p.globalConfig, siteComponentConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -165,45 +186,51 @@ func (p *SentryPlugin) getSiteConfig(site string) *SiteConfig {
 	return cfg.extendGlobalConfig(&p.globalConfig)
 }
 
-func (p *SentryPlugin) getComponentSiteConfig(site, name string) *ComponentConfig {
+func (p *SentryPlugin) getSiteComponentConfig(site, name string) *SiteComponentConfig {
 	siteCfg := p.getSiteConfig(site)
 	if siteCfg == nil {
 		return nil
 	}
-	cfg := siteCfg.getComponentSiteConfig(name)
-	cfg.Environment = p.environment
+	cfg := siteCfg.getSiteComponentConfig(name)
 	return cfg
 }
 
-func terraformRenderComponentResources(site, component string, cfg *ComponentConfig, globalCfg *GlobalConfig) (string, error) {
+func (p *SentryPlugin) getComponentConfig(component string) *ComponentConfig {
+	cfg, ok := p.componentConfigs[component]
+	if !ok {
+		cfg = &ComponentConfig{}
+	}
+	return cfg
+}
+
+func terraformRenderComponentResources(site, component, componentVersion, environment string, globalCfg *GlobalConfig,
+	cfg *SiteComponentConfig) (string, error) {
 	if globalCfg.AuthToken == "" {
 		return "", nil
 	}
 
+	log.Println(environment)
+
 	templateContext := struct {
-		ComponentName string
-		SiteName      string
-		Global        *GlobalConfig
-		Config        *ComponentConfig
+		SiteName         string
+		ComponentName    string
+		ComponentVersion string
+		Environment      string
+		Global           *GlobalConfig
+		Config           *SiteComponentConfig
 	}{
-		ComponentName: component,
-		SiteName:      site,
-		Global:        globalCfg,
-		Config:        cfg,
+		SiteName:         site,
+		ComponentName:    component,
+		ComponentVersion: componentVersion,
+		Environment:      environment,
+		Global:           globalCfg,
+		Config:           cfg,
 	}
 
-	template := `
-	resource "sentry_key" "{{ .ComponentName }}" {
-		organization      = {{ .Global.Organization|printf "%q" }}
-		project           = {{ .Config.Project|printf "%q" }}
-		name              = "{{ .SiteName }}-{{ .Config.Environment }}-{{ .ComponentName }}"
-		{{ if .Config.RateLimitWindow }}
-		rate_limit_window = {{ .Config.RateLimitWindow }}
-		{{ end }}
-		{{ if .Config.RateLimitCount }}
-		rate_limit_count  = {{ .Config.RateLimitCount }}
-		{{ end }}
+	tpl, err := templates.ReadFile("templates/resources.tmpl")
+	if err != nil {
+		return "", err
 	}
-	`
-	return helpers.RenderGoTemplate(template, templateContext)
+
+	return helpers.RenderGoTemplate(string(tpl), templateContext)
 }

@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/mach-composer/mach-composer-plugin-helpers v0.0.4
-	github.com/mach-composer/mach-composer-plugin-sdk v1.0.0
+	github.com/mach-composer/mach-composer-plugin-sdk/v2 v2.0.0-20240102132153-4158409bb886
 	github.com/mitchellh/mapstructure v1.5.0
 )
 

@@ -4,7 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 
-	"github.com/mach-composer/mach-composer-plugin-sdk/schema"
+	"github.com/mach-composer/mach-composer-plugin-sdk/v2/schema"
 )
 
 //go:embed schemas/*
@@ -14,7 +14,7 @@ func getSchema() *schema.ValidationSchema {
 	s := schema.ValidationSchema{}
 	loadSchemaNode("schemas/global-config.json", &s.GlobalConfigSchema)
 	loadSchemaNode("schemas/site-config.json", &s.SiteConfigSchema)
-	loadSchemaNode("schemas/site-config.json", &s.SiteComponentConfigSchema)
+	loadSchemaNode("schemas/site-component-config.json", &s.SiteComponentConfigSchema)
 
 	return &s
 }

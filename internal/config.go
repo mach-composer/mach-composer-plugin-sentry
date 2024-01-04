@@ -1,10 +1,11 @@
 package internal
 
-// SentryConfigBase is the base sentry config.
+// BaseConfig is the base sentry config.
 type BaseConfig struct {
 	DSN             string `mapstructure:"dsn"`
 	RateLimitWindow *int   `mapstructure:"rate_limit_window"`
 	RateLimitCount  *int   `mapstructure:"rate_limit_count"`
+	Project         string `mapstructure:"project"`
 }
 
 // GlobalConfig global Sentry configuration.
@@ -12,28 +13,28 @@ type GlobalConfig struct {
 	BaseConfig   `mapstructure:",squash"`
 	AuthToken    string `mapstructure:"auth_token"`
 	BaseURL      string `mapstructure:"base_url"`
-	Project      string `mapstructure:"project"`
 	Organization string `mapstructure:"organization"`
 }
 
-// SentryConfig is for site specific sentry DSN settings
+// SiteConfig is for site specific sentry DSN settings
 type SiteConfig struct {
 	BaseConfig `mapstructure:",squash"`
-	Project    string                     `mapstructure:"project"`
-	Components map[string]ComponentConfig `mapstructure:"-"`
+	Components map[string]SiteComponentConfig `mapstructure:"-"`
 }
 
-// SentryConfig is for site specific sentry DSN settings
+// SiteComponentConfig is for component specific sentry DSN settings
+type SiteComponentConfig struct {
+	BaseConfig `mapstructure:",squash"`
+}
+
+// ComponentConfig is for general component information
 type ComponentConfig struct {
-	BaseConfig  `mapstructure:",squash"`
-	Environment string `mapstructure:"-"`
-	Project     string `mapstructure:"project"`
+	Version string `mapstructure:"-"`
 }
 
 func (c *SiteConfig) extendGlobalConfig(g *GlobalConfig) *SiteConfig {
 	cfg := &SiteConfig{
 		BaseConfig: g.BaseConfig,
-		Project:    g.Project,
 		Components: c.Components,
 	}
 	if c.DSN != "" {
@@ -51,10 +52,9 @@ func (c *SiteConfig) extendGlobalConfig(g *GlobalConfig) *SiteConfig {
 	return cfg
 }
 
-func (c *ComponentConfig) extendSiteConfig(s *SiteConfig) *ComponentConfig {
-	cfg := &ComponentConfig{
+func (c *SiteComponentConfig) extendSiteConfig(s *SiteConfig) *SiteComponentConfig {
+	cfg := &SiteComponentConfig{
 		BaseConfig: s.BaseConfig,
-		Project:    s.Project,
 	}
 
 	if c.DSN != "" {
@@ -72,10 +72,10 @@ func (c *ComponentConfig) extendSiteConfig(s *SiteConfig) *ComponentConfig {
 	return cfg
 }
 
-func (c *SiteConfig) getComponentSiteConfig(name string) *ComponentConfig {
+func (c *SiteConfig) getSiteComponentConfig(name string) *SiteComponentConfig {
 	compConfig, ok := c.Components[name]
 	if !ok {
-		compConfig = ComponentConfig{}
+		compConfig = SiteComponentConfig{}
 	}
 	return compConfig.extendSiteConfig(c)
 }

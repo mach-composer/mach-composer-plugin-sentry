@@ -1,6 +1,6 @@
 {
   "type": "object",
-  "description": "Sentry site configuration. Setting these will overload the default settings given in the global settings",
+  "description": "Sentry site component configuration. Setting these will override the site configuration.",
   "properties": {
     "dsn": {
       "type": "string"

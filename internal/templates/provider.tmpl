@@ -1,0 +1,4 @@
+provider "sentry" {
+    {{ renderOptionalProperty "token" .Token }}
+    base_url = {{ if .URL }}{{ .URL|printf "%q" }}{{ else }}"https://sentry.io/api/"{{ end }}
+}
