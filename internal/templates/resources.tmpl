@@ -1,4 +1,4 @@
-{{ if .ComponentVersion }}
+{{ if .Config.TrackDeployments }}
     resource "sentry_release_deployment" "{{ .ComponentName }}" {
     organization    = {{ .Global.Organization|printf "%q" }}
     version         = {{ .ComponentVersion|printf "%q" }}

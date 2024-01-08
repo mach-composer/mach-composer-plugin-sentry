@@ -2,10 +2,11 @@ package internal
 
 // BaseConfig is the base sentry config.
 type BaseConfig struct {
-	DSN             string `mapstructure:"dsn"`
-	RateLimitWindow *int   `mapstructure:"rate_limit_window"`
-	RateLimitCount  *int   `mapstructure:"rate_limit_count"`
-	Project         string `mapstructure:"project"`
+	DSN              string `mapstructure:"dsn"`
+	RateLimitWindow  *int   `mapstructure:"rate_limit_window"`
+	RateLimitCount   *int   `mapstructure:"rate_limit_count"`
+	Project          string `mapstructure:"project"`
+	TrackDeployments bool   `mapstructure:"track_deployments"`
 }
 
 // GlobalConfig global Sentry configuration.
@@ -49,6 +50,9 @@ func (c *SiteConfig) extendGlobalConfig(g *GlobalConfig) *SiteConfig {
 	if c.Project != "" {
 		cfg.Project = c.Project
 	}
+	if c.TrackDeployments != false {
+		cfg.TrackDeployments = c.TrackDeployments
+	}
 	return cfg
 }
 
@@ -68,6 +72,9 @@ func (c *SiteComponentConfig) extendSiteConfig(s *SiteConfig) *SiteComponentConf
 	}
 	if c.Project != "" {
 		cfg.Project = c.Project
+	}
+	if c.TrackDeployments != false {
+		cfg.TrackDeployments = c.TrackDeployments
 	}
 	return cfg
 }

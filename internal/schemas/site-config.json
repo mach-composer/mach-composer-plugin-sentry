@@ -10,6 +10,11 @@
     },
     "rate_limit_count": {
       "type": "integer"
+    },
+    "track_deployments": {
+      "type": "boolean",
+      "description": "Whether to track release deployments in Sentry.",
+      "default": false
     }
   }
 }
