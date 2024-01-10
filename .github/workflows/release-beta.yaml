@@ -73,3 +73,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOPATH: ${{ env.GOPATH }}
           GORELEASER_CURRENT_TAG: ${{ steps.next-tag.outputs.output }}
+          PRERELEASE: true
+          MAKE_LATEST: false
