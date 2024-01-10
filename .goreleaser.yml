@@ -2,7 +2,6 @@ project_name: mach-composer-plugin-sentry
 
 env:
   - PRERELEASE={{ if index .Env "PRERELEASE"  }}{{ .Env.PRERELEASE }}{{ else }}false{{ end }}
-  - MAKE_LATEST={{ if index .Env "MAKE_LATEST"  }}{{ .Env.MAKE_LATEST }}{{ else }}true{{ end }}
 
 builds:
   - id: "mach-composer-plugin"
@@ -27,7 +26,6 @@ builds:
 release:
   mode: replace
   prerelease: "{{ .Env.PRERELEASE }}"
-  make_latest: "{{ .Env.MAKE_LATEST }}"
 
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
