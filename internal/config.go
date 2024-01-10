@@ -6,7 +6,7 @@ type BaseConfig struct {
 	RateLimitWindow  *int   `mapstructure:"rate_limit_window"`
 	RateLimitCount   *int   `mapstructure:"rate_limit_count"`
 	Project          string `mapstructure:"project"`
-	TrackDeployments bool   `mapstructure:"track_deployments"`
+	TrackDeployments *bool  `mapstructure:"track_deployments"`
 }
 
 // GlobalConfig global Sentry configuration.
@@ -17,10 +17,20 @@ type GlobalConfig struct {
 	Organization string `mapstructure:"organization"`
 }
 
+var defaultGlobalConfig = GlobalConfig{
+	BaseConfig: BaseConfig{
+		TrackDeployments: boolPtr(true),
+	},
+}
+
 // SiteConfig is for site specific sentry DSN settings
 type SiteConfig struct {
 	BaseConfig `mapstructure:",squash"`
 	Components map[string]SiteComponentConfig `mapstructure:"-"`
+}
+
+var defaultSiteConfig = SiteConfig{
+	Components: map[string]SiteComponentConfig{},
 }
 
 // SiteComponentConfig is for component specific sentry DSN settings
@@ -28,13 +38,15 @@ type SiteComponentConfig struct {
 	BaseConfig `mapstructure:",squash"`
 }
 
+var defaultSiteComponentConfig = SiteComponentConfig{}
+
 // ComponentConfig is for general component information
 type ComponentConfig struct {
 	Version string `mapstructure:"-"`
 }
 
-func (c *SiteConfig) extendGlobalConfig(g *GlobalConfig) *SiteConfig {
-	cfg := &SiteConfig{
+func (c *SiteConfig) extendGlobalConfig(g GlobalConfig) SiteConfig {
+	cfg := SiteConfig{
 		BaseConfig: g.BaseConfig,
 		Components: c.Components,
 	}
@@ -50,14 +62,14 @@ func (c *SiteConfig) extendGlobalConfig(g *GlobalConfig) *SiteConfig {
 	if c.Project != "" {
 		cfg.Project = c.Project
 	}
-	if c.TrackDeployments != false {
+	if c.TrackDeployments != nil {
 		cfg.TrackDeployments = c.TrackDeployments
 	}
 	return cfg
 }
 
-func (c *SiteComponentConfig) extendSiteConfig(s *SiteConfig) *SiteComponentConfig {
-	cfg := &SiteComponentConfig{
+func (c *SiteComponentConfig) extendSiteConfig(s SiteConfig) SiteComponentConfig {
+	cfg := SiteComponentConfig{
 		BaseConfig: s.BaseConfig,
 	}
 
@@ -73,16 +85,16 @@ func (c *SiteComponentConfig) extendSiteConfig(s *SiteConfig) *SiteComponentConf
 	if c.Project != "" {
 		cfg.Project = c.Project
 	}
-	if c.TrackDeployments != false {
+	if c.TrackDeployments != nil {
 		cfg.TrackDeployments = c.TrackDeployments
 	}
 	return cfg
 }
 
-func (c *SiteConfig) getSiteComponentConfig(name string) *SiteComponentConfig {
+func (c *SiteConfig) getSiteComponentConfig(name string) SiteComponentConfig {
 	compConfig, ok := c.Components[name]
 	if !ok {
-		compConfig = SiteComponentConfig{}
+		compConfig = defaultSiteComponentConfig
 	}
-	return compConfig.extendSiteConfig(c)
+	return compConfig.extendSiteConfig(*c)
 }

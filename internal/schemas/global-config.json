@@ -1,6 +1,7 @@
 {
   "type": "object",
   "description": "Sentry global configuration.",
+  "additionalProperties": false,
   "properties": {
     "dsn": {
       "type": "string"
@@ -26,7 +27,7 @@
     "track_deployments": {
       "type": "boolean",
       "description": "Whether to track release deployments in Sentry.",
-      "default": false
+      "default": true
     }
   }
 }

@@ -1,5 +1,6 @@
 {
   "type": "object",
+  "additionalProperties": false,
   "description": "Sentry site configuration. Setting these will overload the default settings given in the global settings",
   "properties": {
     "dsn": {
@@ -11,10 +12,13 @@
     "rate_limit_count": {
       "type": "integer"
     },
+    "project": {
+      "type": "string"
+    },
     "track_deployments": {
       "type": "boolean",
       "description": "Whether to track release deployments in Sentry.",
-      "default": false
+      "default": true
     }
   }
 }

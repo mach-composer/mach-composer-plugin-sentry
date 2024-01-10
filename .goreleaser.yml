@@ -20,6 +20,10 @@ builds:
       - arm64
     mod_timestamp: '{{ .CommitTimestamp }}'
 
+release:
+  mode: replace
+  prerelease: auto
+
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
   algorithm: sha256

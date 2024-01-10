@@ -1,52 +1,38 @@
 package internal
 
 import (
+	_ "dario.cat/mergo"
 	"embed"
 	"fmt"
-	"log"
-
+	"github.com/hashicorp/go-hclog"
 	"github.com/mach-composer/mach-composer-plugin-helpers/helpers"
-	"github.com/mach-composer/mach-composer-plugin-sdk/v2/plugin"
 	"github.com/mach-composer/mach-composer-plugin-sdk/v2/schema"
 	"github.com/mitchellh/mapstructure"
+	"sync"
 )
 
 //go:embed templates/*
 var templates embed.FS
 
+//go:embed schemas/*
+var schemas embed.FS
+
 type SentryPlugin struct {
 	environment      string
 	provider         string
 	globalConfig     GlobalConfig
-	siteConfigs      map[string]*SiteConfig
-	componentConfigs map[string]*ComponentConfig
+	siteConfigs      map[string]SiteConfig
+	componentConfigs map[string]ComponentConfig
 }
 
-func NewSentryPlugin() schema.MachComposerPlugin {
+func NewSentryPlugin() *SentryPlugin {
 	state := &SentryPlugin{
 		provider:         "1.0.2",
-		siteConfigs:      map[string]*SiteConfig{},
-		componentConfigs: map[string]*ComponentConfig{},
+		siteConfigs:      map[string]SiteConfig{},
+		componentConfigs: map[string]ComponentConfig{},
 	}
 
-	return plugin.NewPlugin(&schema.PluginSchema{
-		Identifier: "sentry",
-
-		Configure: state.Configure,
-
-		GetValidationSchema: state.GetValidationSchema,
-
-		// Config
-		SetGlobalConfig:        state.SetGlobalConfig,
-		SetSiteConfig:          state.SetSiteConfig,
-		SetSiteComponentConfig: state.SetSiteComponentConfig,
-		SetComponentConfig:     state.SetComponentConfig,
-
-		// Renders
-		RenderTerraformProviders: state.TerraformRenderProviders,
-		RenderTerraformResources: state.TerraformRenderResources,
-		RenderTerraformComponent: state.RenderTerraformComponent,
-	})
+	return state
 }
 
 func (p *SentryPlugin) Configure(environment string, provider string) error {
@@ -58,44 +44,66 @@ func (p *SentryPlugin) Configure(environment string, provider string) error {
 }
 
 func (p *SentryPlugin) IsEnabled() bool {
-	return p.globalConfig.AuthToken != "" || p.globalConfig.DSN != ""
+	return p.globalConfig.AuthToken != ""
 }
 
 func (p *SentryPlugin) GetValidationSchema() (*schema.ValidationSchema, error) {
-	log.Println("GetValidationSchema")
-	result := getSchema()
-	return result, nil
+	s := &schema.ValidationSchema{}
+
+	if err := loadSchemaNode("schemas/global-config.json", &s.GlobalConfigSchema); err != nil {
+		return nil, err
+	}
+
+	if err := loadSchemaNode("schemas/site-config.json", &s.SiteConfigSchema); err != nil {
+		return nil, err
+	}
+
+	if err := loadSchemaNode("schemas/site-component-config.json", &s.SiteComponentConfigSchema); err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }
 
 func (p *SentryPlugin) SetGlobalConfig(data map[string]any) error {
-	if err := mapstructure.Decode(data, &p.globalConfig); err != nil {
+	if err := validate("schemas/global-config.json", data); err != nil {
+		return fmt.Errorf("invalid global config: %w", err)
+	}
+
+	cfg := defaultGlobalConfig
+	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
+	p.globalConfig = cfg
 	return nil
 }
 
 func (p *SentryPlugin) SetSiteConfig(site string, data map[string]any) error {
-	cfg := SiteConfig{
-		Components: map[string]SiteComponentConfig{},
+	if err := validate("schemas/site-config.json", data); err != nil {
+		return fmt.Errorf("invalid site config for site %s: %w", site, err)
 	}
+
+	cfg := defaultSiteConfig
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
-	p.siteConfigs[site] = &cfg
+	p.siteConfigs[site] = cfg
 	return nil
 }
 
 func (p *SentryPlugin) SetSiteComponentConfig(site string, component string, data map[string]any) error {
-	cfg := SiteComponentConfig{}
+	if err := validate("schemas/site-component-config.json", data); err != nil {
+		return err
+	}
+
+	cfg := defaultSiteComponentConfig
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
 
 	siteCfg, ok := p.siteConfigs[site]
 	if !ok {
-		siteCfg = &SiteConfig{
-			Components: map[string]SiteComponentConfig{},
-		}
+		siteCfg = defaultSiteConfig
 		p.siteConfigs[site] = siteCfg
 	}
 	siteCfg.Components[component] = cfg
@@ -111,13 +119,14 @@ func (p *SentryPlugin) SetComponentConfig(component, version string, data map[st
 		return err
 	}
 
-	p.componentConfigs[component] = &cfg
+	p.componentConfigs[component] = cfg
 
 	return nil
 }
 
-func (p *SentryPlugin) TerraformRenderProviders(_ string) (string, error) {
+func (p *SentryPlugin) RenderTerraformProviders(_ string) (string, error) {
 	if !p.IsEnabled() {
+		hclog.Default().Warn("Sentry plugin provider rendering is disabled. Set auth_token to enable")
 		return "", nil
 	}
 	result := fmt.Sprintf(`
@@ -128,13 +137,9 @@ func (p *SentryPlugin) TerraformRenderProviders(_ string) (string, error) {
 	return result, nil
 }
 
-func (p *SentryPlugin) TerraformRenderResources(site string) (string, error) {
+func (p *SentryPlugin) RenderTerraformResources(_ string) (string, error) {
 	if !p.IsEnabled() {
-		return "", nil
-	}
-
-	cfg := p.getSiteConfig(site)
-	if cfg == nil {
+		hclog.Default().Warn("Sentry plugin resource rendering is disabled. Set auth_token to enable")
 		return "", nil
 	}
 
@@ -154,9 +159,16 @@ func (p *SentryPlugin) TerraformRenderResources(site string) (string, error) {
 	return helpers.RenderGoTemplate(string(tpl), templateContext)
 }
 
+var (
+	warnOnce sync.Once
+)
+
 func (p *SentryPlugin) RenderTerraformComponent(site string, component string) (*schema.ComponentSchema, error) {
 	siteComponentConfig := p.getSiteComponentConfig(site, component)
-	componentConfig := p.getComponentConfig(component)
+	componentConfig, err := p.getComponentConfig(component)
+	if err != nil {
+		return nil, err
+	}
 
 	vars := fmt.Sprintf("sentry_dsn = \"%s\"", siteComponentConfig.DSN)
 	if p.globalConfig.AuthToken != "" {
@@ -167,62 +179,66 @@ func (p *SentryPlugin) RenderTerraformComponent(site string, component string) (
 		Variables: vars,
 	}
 
-	if p.IsEnabled() {
-		resources, err := terraformRenderComponentResources(site, component, componentConfig.Version, p.environment, &p.globalConfig, siteComponentConfig)
-		if err != nil {
-			return nil, err
-		}
-		result.Resources = resources
+	if !p.IsEnabled() {
+		warnOnce.Do(func() {
+			hclog.Default().Warn("Sentry plugin component rendering is disabled. Set auth_token to enable")
+		})
+		return result, nil
 	}
+
+	resources, err := terraformRenderComponentResources(site, component, componentConfig.Version, p.environment, p.globalConfig, siteComponentConfig)
+	if err != nil {
+		return nil, err
+	}
+	result.Resources = resources
 
 	return result, nil
 }
 
-func (p *SentryPlugin) getSiteConfig(site string) *SiteConfig {
+func (p *SentryPlugin) getSiteConfig(site string) SiteConfig {
 	cfg, ok := p.siteConfigs[site]
 	if !ok {
-		cfg = &SiteConfig{}
+		cfg = defaultSiteConfig
 	}
-	return cfg.extendGlobalConfig(&p.globalConfig)
+	return cfg.extendGlobalConfig(p.globalConfig)
 }
 
-func (p *SentryPlugin) getSiteComponentConfig(site, name string) *SiteComponentConfig {
+func (p *SentryPlugin) getSiteComponentConfig(site, name string) SiteComponentConfig {
 	siteCfg := p.getSiteConfig(site)
-	if siteCfg == nil {
-		return nil
-	}
 	cfg := siteCfg.getSiteComponentConfig(name)
 	return cfg
 }
 
-func (p *SentryPlugin) getComponentConfig(component string) *ComponentConfig {
+func (p *SentryPlugin) getComponentConfig(component string) (ComponentConfig, error) {
 	cfg, ok := p.componentConfigs[component]
 	if !ok {
-		cfg = &ComponentConfig{}
+		return ComponentConfig{}, fmt.Errorf("component %s not found", component)
 	}
-	return cfg
+	return cfg, nil
 }
 
-func terraformRenderComponentResources(site, component, componentVersion, environment string, globalCfg *GlobalConfig,
-	cfg *SiteComponentConfig) (string, error) {
-	if globalCfg.AuthToken == "" {
-		return "", nil
-	}
+func terraformRenderComponentResources(site, component, componentVersion, environment string, globalCfg GlobalConfig,
+	cfg SiteComponentConfig) (string, error) {
 
-	log.Println(environment)
+	trackDeployments := false
+	if cfg.TrackDeployments != nil {
+		trackDeployments = *cfg.TrackDeployments
+	}
 
 	templateContext := struct {
 		SiteName         string
 		ComponentName    string
 		ComponentVersion string
 		Environment      string
-		Global           *GlobalConfig
-		Config           *SiteComponentConfig
+		TrackDeployments bool
+		Global           GlobalConfig
+		Config           SiteComponentConfig
 	}{
 		SiteName:         site,
 		ComponentName:    component,
 		ComponentVersion: componentVersion,
 		Environment:      environment,
+		TrackDeployments: trackDeployments,
 		Global:           globalCfg,
 		Config:           cfg,
 	}
