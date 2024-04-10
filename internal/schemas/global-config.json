@@ -1,27 +1,33 @@
 {
-    "type": "object",
-    "description": "Global Sentry configuration.",
-    "properties": {
-        "dsn": {
-            "type": "string"
-        },
-        "rate_limit_window": {
-            "type": "integer"
-        },
-        "rate_limit_count": {
-            "type": "integer"
-        },
-        "auth_token": {
-            "type": "string"
-        },
-        "base_url": {
-            "type": "string"
-        },
-        "project": {
-            "type": "string"
-        },
-        "organization": {
-            "type": "string"
-        }
+  "type": "object",
+  "description": "Sentry global configuration.",
+  "additionalProperties": false,
+  "properties": {
+    "dsn": {
+      "type": "string"
+    },
+    "rate_limit_window": {
+      "type": "integer"
+    },
+    "rate_limit_count": {
+      "type": "integer"
+    },
+    "auth_token": {
+      "type": "string"
+    },
+    "base_url": {
+      "type": "string"
+    },
+    "project": {
+      "type": "string"
+    },
+    "organization": {
+      "type": "string"
+    },
+    "track_deployments": {
+      "type": "boolean",
+      "description": "Whether to track release deployments in Sentry.",
+      "default": true
     }
+  }
 }

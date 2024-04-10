@@ -5,10 +5,9 @@ tasks:
     cmd: golangci-lint run
 
   build:
-    cmd: goreleaser build --snapshot --single-target --rm-dist --clean
+    env:
+      GORELEASER_CURRENT_TAG: v0.0.0
+    cmd: goreleaser build --snapshot --single-target --clean
 
   test:
     cmd: go test -race ./...
-
-  cover:
-    cmd: go test -race -coverprofile=coverage.out -covermode=atomic ./...
