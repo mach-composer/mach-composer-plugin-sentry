@@ -1,10 +1,14 @@
-name: Run Tests
+name: Run tests
 
 on: [ pull_request ]
 
-jobs:
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
 
-  linux:
+jobs:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,27 +22,35 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Set up Go modules cache
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-go-modules
+      - name: Set up Task
+        uses: arduino/setup-task@v1
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go${{ matrix.go-version }}-build-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go${{ matrix.go-version }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-go${{ matrix.go-version }}-build-
-            ${{ runner.os }}-go${{ matrix.go-version }}-
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Has changes file
+        uses: mach-composer/check-changie-changes-action@main
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          args: --issues-exit-code=0
+          args: --issues-exit-code=0 --timeout=5m
 
       - name: Run tests
-        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+        run: |
+          task cover
+          mkdir -p output
+          cp coverage.out output/coverage.out
 
-      - name: Build binary
+      - name: Upload to codecov
+        uses: codecov/codecov-action@v3
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: output
+          path: output/**/*
+
+      - name: build binary
         uses: goreleaser/goreleaser-action@v3
         with:
           args: build --snapshot --clean --single-target

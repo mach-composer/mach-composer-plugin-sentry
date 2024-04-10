@@ -29,13 +29,10 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Get goreleaser app token
-        id: get-app-token
-        uses: labd/action-gh-app-token@main
+      - name: Set up Task
+        uses: arduino/setup-task@v1
         with:
-          app-id: ${{ secrets.MCI_APP_ID }}
-          private-key: ${{ secrets.MCI_APP_PRIVATE_KEY }}
-          installation-id: ${{ secrets.MCI_APP_INSTALLATION_ID }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get hash
         shell: bash
@@ -70,7 +67,14 @@ jobs:
         with:
           args: release --clean --skip=validate --release-notes ${{ steps.save_changes.outputs.changelog_file }}
         env:
+          GORELEASER_CURRENT_TAG: ${{ steps.next-tag.outputs.output }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOPATH: ${{ env.GOPATH }}
-          GORELEASER_CURRENT_TAG: ${{ steps.next-tag.outputs.output }}
-          PRERELEASE: true
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+          SKIP_UPLOAD: true
+
+      - name: Upload release
+        uses: actions/upload-artifact@v3
+        with:
+          name: mach-composer-plugin-sentry
+          path: dist/*
