@@ -3,7 +3,7 @@ unreleasedDir: unreleased
 headerPath: header.tpl.md
 changelogPath: CHANGELOG.md
 versionExt: md
-versionFormat: '## {{.Version}} ({{.Time.Format "2006-01-02"}})'
+versionFormat: '## {{.Version}} - {{.Time.Format "2006-01-02"}}'
 kindFormat: '### {{.Kind}}'
 changeFormat: '* {{.Body}}'
 kinds:
@@ -15,13 +15,14 @@ kinds:
     auto: minor
   - label: Removed
     auto: major
-  - label: Updated
-    auto: patch
   - label: Fixed
     auto: patch
   - label: Security
     auto: patch
+  - label: Dependency
+    auto: patch
 newlines:
   afterChangelogHeader: 1
   beforeChangelogVersion: 1
+  endOfVersion: 1
 envPrefix: CHANGIE_
