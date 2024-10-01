@@ -3,10 +3,10 @@ module github.com/mach-composer/mach-composer-plugin-sentry
 go 1.21
 
 require (
-	dario.cat/mergo v1.0.0
+	dario.cat/mergo v1.0.1
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/mach-composer/mach-composer-plugin-helpers v0.0.4
-	github.com/mach-composer/mach-composer-plugin-sdk/v2 v2.0.0
+	github.com/mach-composer/mach-composer-plugin-sdk/v2 v2.0.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.9.0
 	github.com/xeipuuv/gojsonschema v1.2.0
@@ -21,7 +21,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
-	github.com/hashicorp/go-plugin v1.6.0 // indirect
+	github.com/hashicorp/go-plugin v1.6.1 // indirect
 	github.com/hashicorp/hcl/v2 v2.20.1 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
