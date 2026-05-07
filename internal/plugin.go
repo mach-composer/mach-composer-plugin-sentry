@@ -1,14 +1,15 @@
 package internal
 
 import (
-	_ "dario.cat/mergo"
 	"embed"
 	"fmt"
+	"sync"
+
+	_ "dario.cat/mergo"
 	"github.com/hashicorp/go-hclog"
 	"github.com/mach-composer/mach-composer-plugin-helpers/helpers"
 	"github.com/mach-composer/mach-composer-plugin-sdk/v2/schema"
 	"github.com/mitchellh/mapstructure"
-	"sync"
 )
 
 //go:embed templates/*
@@ -219,7 +220,6 @@ func (p *SentryPlugin) getComponentConfig(component string) (ComponentConfig, er
 
 func terraformRenderComponentResources(site, component, componentVersion, environment string, globalCfg GlobalConfig,
 	cfg SiteComponentConfig) (string, error) {
-
 	trackDeployments := false
 	if cfg.TrackDeployments != nil {
 		trackDeployments = *cfg.TrackDeployments
