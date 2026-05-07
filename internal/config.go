@@ -7,6 +7,7 @@ type BaseConfig struct {
 	RateLimitCount   *int   `mapstructure:"rate_limit_count"`
 	Project          string `mapstructure:"project"`
 	TrackDeployments *bool  `mapstructure:"track_deployments"`
+	ExposeKey        *bool  `mapstructure:"expose_key"`
 }
 
 // GlobalConfig global Sentry configuration.
@@ -17,10 +18,13 @@ type GlobalConfig struct {
 	Organization string `mapstructure:"organization"`
 }
 
-var defaultGlobalConfig = GlobalConfig{
-	BaseConfig: BaseConfig{
-		TrackDeployments: boolPtr(true),
-	},
+func newGlobalConfig() GlobalConfig {
+	return GlobalConfig{
+		BaseConfig: BaseConfig{
+			TrackDeployments: boolPtr(true),
+			ExposeKey:        boolPtr(false),
+		},
+	}
 }
 
 // SiteConfig is for site specific sentry DSN settings
@@ -29,8 +33,10 @@ type SiteConfig struct {
 	Components map[string]SiteComponentConfig `mapstructure:"-"`
 }
 
-var defaultSiteConfig = SiteConfig{
-	Components: map[string]SiteComponentConfig{},
+func newSiteConfig() SiteConfig {
+	return SiteConfig{
+		Components: map[string]SiteComponentConfig{},
+	}
 }
 
 // SiteComponentConfig is for component specific sentry DSN settings
@@ -65,6 +71,9 @@ func (c *SiteConfig) extendGlobalConfig(g GlobalConfig) SiteConfig {
 	if c.TrackDeployments != nil {
 		cfg.TrackDeployments = c.TrackDeployments
 	}
+	if c.ExposeKey != nil {
+		cfg.ExposeKey = c.ExposeKey
+	}
 	return cfg
 }
 
@@ -87,6 +96,9 @@ func (c *SiteComponentConfig) extendSiteConfig(s SiteConfig) SiteComponentConfig
 	}
 	if c.TrackDeployments != nil {
 		cfg.TrackDeployments = c.TrackDeployments
+	}
+	if c.ExposeKey != nil {
+		cfg.ExposeKey = c.ExposeKey
 	}
 	return cfg
 }

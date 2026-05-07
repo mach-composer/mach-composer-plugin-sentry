@@ -3,6 +3,7 @@ package internal
 import (
 	"embed"
 	"fmt"
+	"strings"
 	"sync"
 
 	_ "dario.cat/mergo"
@@ -71,7 +72,7 @@ func (p *SentryPlugin) SetGlobalConfig(data map[string]any) error {
 		return fmt.Errorf("invalid global config: %w", err)
 	}
 
-	cfg := defaultGlobalConfig
+	cfg := newGlobalConfig()
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
@@ -84,7 +85,7 @@ func (p *SentryPlugin) SetSiteConfig(site string, data map[string]any) error {
 		return fmt.Errorf("invalid site config for site %s: %w", site, err)
 	}
 
-	cfg := defaultSiteConfig
+	cfg := newSiteConfig()
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
@@ -104,7 +105,7 @@ func (p *SentryPlugin) SetSiteComponentConfig(site string, component string, dat
 
 	siteCfg, ok := p.siteConfigs[site]
 	if !ok {
-		siteCfg = defaultSiteConfig
+		siteCfg = newSiteConfig()
 		p.siteConfigs[site] = siteCfg
 	}
 	siteCfg.Components[component] = cfg
@@ -171,13 +172,27 @@ func (p *SentryPlugin) RenderTerraformComponent(site string, component string) (
 		return nil, err
 	}
 
-	vars := fmt.Sprintf("sentry_dsn = \"%s\"", siteComponentConfig.DSN)
+	var vars []string
 	if p.globalConfig.AuthToken != "" {
-		vars = fmt.Sprintf("sentry_dsn = sentry_key.%s.dsn_secret", component)
+		vars = append(vars,
+			fmt.Sprintf("sentry_dsn = sentry_key.%s.dsn_secret", component),
+		)
+		if siteComponentConfig.ExposeKey != nil && *siteComponentConfig.ExposeKey {
+			vars = append(vars,
+				fmt.Sprintf("sentry_key = sentry_key.%s.secret", component),
+			)
+		}
+	} else {
+		vars = append(vars,
+			fmt.Sprintf("sentry_dsn = \"%s\"", siteComponentConfig.DSN),
+		)
+		if siteComponentConfig.ExposeKey != nil && *siteComponentConfig.ExposeKey {
+			hclog.Default().Warn("expose_key is set to true but auth_token is not configured; sentry_key will not be available", "site", site, "component", component)
+		}
 	}
 
 	result := &schema.ComponentSchema{
-		Variables: vars,
+		Variables: strings.Join(vars, "\n"),
 	}
 
 	if !p.IsEnabled() {
@@ -199,7 +214,7 @@ func (p *SentryPlugin) RenderTerraformComponent(site string, component string) (
 func (p *SentryPlugin) getSiteConfig(site string) SiteConfig {
 	cfg, ok := p.siteConfigs[site]
 	if !ok {
-		cfg = defaultSiteConfig
+		cfg = newSiteConfig()
 	}
 	return cfg.extendGlobalConfig(p.globalConfig)
 }
