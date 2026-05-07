@@ -20,6 +20,7 @@ jobs:
           app-id: ${{ secrets.MCI_APP_ID }}
           private-key: ${{ secrets.MCI_APP_PRIVATE_KEY }}
           installation-id: ${{ secrets.MCI_APP_INSTALLATION_ID }}
+
       - name: set to project board
         uses: actions/add-to-project@244f685bbc3b7adfa8466e08b698b5577571133e # v1.0.2
         with:
