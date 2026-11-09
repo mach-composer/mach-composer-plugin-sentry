@@ -6,7 +6,7 @@ require (
 	dario.cat/mergo v1.0.2
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/mach-composer/mach-composer-plugin-helpers v0.0.4
-	github.com/mach-composer/mach-composer-plugin-sdk/v2 v2.1.0
+	github.com/mach-composer/mach-composer-plugin-sdk/v2 v2.1.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/stretchr/testify v1.10.0
 	github.com/xeipuuv/gojsonschema v1.2.0
